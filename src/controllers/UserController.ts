@@ -3,6 +3,7 @@ import { userRepository } from '../repositories/userRepository';
 import { HttpStatus } from '../enums/htppStatus';
 import validator from 'validator';
 import bcrypt from 'bcrypt';
+import { validateUserInput } from '../utils/validation';
 export class UserController {
     static async getAllUsers(_: Request, res: Response) {
         try {
@@ -22,31 +23,16 @@ export class UserController {
             const { firstName, lastName, email, password, transactions } =
                 req.body;
 
-            if (!firstName || !lastName || !email || !password) {
-                return res
-                    .status(HttpStatus.BAD_REQUEST)
-                    .json({ message: 'Missing required fields' });
+            const validation = validateUserInput(
+                firstName,
+                lastName,
+                email,
+                password
+            );
+            if (!validation.valid) {
+                return res.status(HttpStatus.BAD_REQUEST)
+                    .json({ message: validation.message });
             }
-
-            const emailIsValid = validator.isEmail(email);
-            if (!emailIsValid) {
-                return res
-                    .status(HttpStatus.BAD_REQUEST)
-                    .json({ message: 'Invalid email format' });
-            }
-            const passwordIsValid = validator.isStrongPassword(password, {
-                minLength: 6,
-                minUppercase: 1,
-                minNumbers: 1,
-                minSymbols: 0,
-            });
-
-            if (!passwordIsValid) {
-                return res
-                    .status(HttpStatus.BAD_REQUEST)
-                    .json({ message: 'Password is not strong enough' });
-            }
-            
             const userExists = await userRepository.findOneBy({ email });
 
             if (userExists) {
