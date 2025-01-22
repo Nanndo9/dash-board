@@ -17,7 +17,8 @@ export class UserController {
                 password
             );
             if (!validation.valid) {
-                return res.status(HttpStatus.BAD_REQUEST)
+                return res
+                    .status(HttpStatus.BAD_REQUEST)
                     .json({ message: validation.message });
             }
             const userExists = await userRepository.findOneBy({ email });
@@ -57,5 +58,23 @@ export class UserController {
                 .json({ message: 'Error when seeking users', error });
         }
     }
-
+    static async getUserById(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const userId = await userRepository.findOne({
+                where: { id },
+                relations: ['transactions'],
+            });
+            if (!userId) {
+                return res
+                    .status(HttpStatus.NOT_FOUND)
+                    .json({ message: 'User not found' });
+            }
+            return res.status(HttpStatus.OK).json(userId);
+        } catch (error) {
+            return res
+                .status(HttpStatus.OK)
+                .json({ message: 'Error when seeking users', error });
+        }
+    }
 }
