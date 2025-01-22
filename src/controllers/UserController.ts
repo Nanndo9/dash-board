@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository';
 import { HttpStatus } from '../enums/htppStatus';
+import validator from 'validator';
 import bcrypt from 'bcrypt';
 export class UserController {
     static async getAllUsers(_: Request, res: Response) {
@@ -21,21 +22,18 @@ export class UserController {
             const { firstName, lastName, email, password, transactions } =
                 req.body;
 
-            const requiredFields = [
-                ' firstName',
-                'lastName',
-                'email',
-                'password',
-                'transactions',
-            ];
-
-            for (const field of requiredFields) {
-                if (!req.body[field]) {
-                    return res
+            if (!firstName || !lastName || !email || !password) {
+                return res
                     .status(HttpStatus.BAD_REQUEST)
                     .json({ message: 'Missing required fields' });
-                }
             }
+            if (password.length < 6) {
+                return res
+                    .status(HttpStatus.BAD_REQUEST)
+                    .json({
+                        message: 'Password must be at least 6 characters long',
+                    });
+            } 
             const userExists = await userRepository.findOneBy({ email });
 
             if (userExists) {
