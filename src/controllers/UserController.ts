@@ -5,19 +5,6 @@ import validator from 'validator';
 import bcrypt from 'bcrypt';
 import { validateUserInput } from '../utils/validation';
 export class UserController {
-    static async getAllUsers(_: Request, res: Response) {
-        try {
-            const users = await userRepository.find({
-                relations: ['transactions'],
-            });
-            return res.status(HttpStatus.OK).json(users);
-        } catch (error) {
-            return res
-                .status(HttpStatus.OK)
-                .json({ message: 'Error when seeking users', error });
-        }
-    }
-
     static async createUser(req: Request, res: Response) {
         try {
             const { firstName, lastName, email, password, transactions } =
@@ -58,4 +45,17 @@ export class UserController {
                 .json({ message: 'Error when creating user', error });
         }
     }
+    static async getAllUsers(_: Request, res: Response) {
+        try {
+            const users = await userRepository.find({
+                relations: ['transactions'],
+            });
+            return res.status(HttpStatus.OK).json(users);
+        } catch (error) {
+            return res
+                .status(HttpStatus.OK)
+                .json({ message: 'Error when seeking users', error });
+        }
+    }
+
 }
