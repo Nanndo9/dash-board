@@ -20,6 +20,22 @@ export class UserController {
         try {
             const { firstName, lastName, email, password, transactions } =
                 req.body;
+
+            const requiredFields = [
+                ' firstName',
+                'lastName',
+                'email',
+                'password',
+                'transactions',
+            ];
+
+            for (const field of requiredFields) {
+                if (!req.body[field]) {
+                    return res
+                    .status(HttpStatus.BAD_REQUEST)
+                    .json({ message: 'Missing required fields' });
+                }
+            }
             const userExists = await userRepository.findOneBy({ email });
 
             if (userExists) {
