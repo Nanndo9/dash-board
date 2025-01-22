@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository';
 import { HttpStatus } from '../enums/htppStatus';
-import validator from 'validator';
 import bcrypt from 'bcrypt';
 import { validateUserInput } from '../utils/validation';
+import validator from 'validator';
 export class UserController {
     static async createUser(req: Request, res: Response) {
         try {
@@ -74,7 +74,75 @@ export class UserController {
         } catch (error) {
             return res
                 .status(HttpStatus.OK)
-                .json({ message: 'Error when seeking users', error });
+                .json({ message: 'Error when seeking users' });
         }
+    }
+    static async userUpdate(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const { password, email, ...updateData } = req.body;
+            const user = await userRepository.findOne({ where: { id } });
+            if (!user) {
+                return res
+                    .status(HttpStatus.NOT_FOUND)
+                    .json({ message: 'User not found' });
+            }
+            if (email) {
+                const emailExists = await userRepository.findOne({
+                    where: { email },
+                });
+                if (emailExists && emailExists.id !== id) {
+                    return res
+                        .status(HttpStatus.BAD_REQUEST)
+                        .json({ message: 'Email is already in use' });
+                }
+                updateData.email = email;
+            }
+            if (password) {
+                if (password.length < 6) {
+                    return res.status(HttpStatus.BAD_REQUEST).json({
+                        message: 'Password must be at least 6 characters long',
+                    });
+                }
+
+                const passwordIsValid = validator.isStrongPassword(password, {
+                    minLength: 6,
+                    minUppercase: 1,
+                    minNumbers: 1,
+                    minSymbols: 0,
+                });
+
+                if (!passwordIsValid) {
+                    return res
+                        .status(HttpStatus.BAD_REQUEST)
+                        .json({ message: 'Password is not strong enough' });
+                }
+
+                updateData.password = await bcrypt.hash(password, 8);
+            }
+
+            await userRepository.update(id, updateData);
+            const updatedUser = await userRepository.findOne({ where: { id } });
+            return res.status(HttpStatus.OK).json(updatedUser);
+        } catch (error) {
+            return res
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({ message: 'Error updating user', error });
+        }
+    }
+
+    static async deleteUser(req: Request, res: Response) {
+        const { id } = req.params;
+        const user = await userRepository.findOne({ where: { id } });
+        if (!user) {
+            return res
+                .status(HttpStatus.NOT_FOUND)
+                .json({ message: 'User not found' });
+        }
+
+        await userRepository.delete(user);
+        return res
+            .status(HttpStatus.OK)
+            .json({ message: 'successful deleted user' });
     }
 }

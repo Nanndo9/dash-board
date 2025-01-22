@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository';
 import { transactionRepository } from '../repositories/transactionRepository';
 import { HttpStatus } from '../enums/htppStatus';
+import { User } from '../entities/User';
 
 export class TransactionController {
     static async createTransaction(req: Request, res: Response) {
@@ -40,6 +41,29 @@ export class TransactionController {
             return res
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({ message: 'Erro ao buscar transações', error });
+        }
+    }
+
+    static async getTransactionsByUserId(req: Request, res: Response) {
+        try {
+            const userId = req.query.userId as string;
+
+            const transactions = await transactionRepository.find({
+                where: { user: { id: userId } },
+                relations: ['user'],
+            });
+
+            if (!transactions || transactions.length === 0) {
+                return res
+                    .status(HttpStatus.NOT_FOUND)
+                    .json({ message: 'No transactions found for this user' });
+            }
+
+            return res.status(HttpStatus.OK).json(transactions);
+        } catch (error) {
+            return res
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({ message: 'Error when seeking transactions', error });
         }
     }
 }
