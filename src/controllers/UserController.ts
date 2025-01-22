@@ -27,13 +27,26 @@ export class UserController {
                     .status(HttpStatus.BAD_REQUEST)
                     .json({ message: 'Missing required fields' });
             }
-            if (password.length < 6) {
+
+            const emailIsValid = validator.isEmail(email);
+            if (!emailIsValid) {
                 return res
                     .status(HttpStatus.BAD_REQUEST)
-                    .json({
-                        message: 'Password must be at least 6 characters long',
-                    });
-            } 
+                    .json({ message: 'Invalid email format' });
+            }
+            const passwordIsValid = validator.isStrongPassword(password, {
+                minLength: 6,
+                minUppercase: 1,
+                minNumbers: 1,
+                minSymbols: 0,
+            });
+
+            if (!passwordIsValid) {
+                return res
+                    .status(HttpStatus.BAD_REQUEST)
+                    .json({ message: 'Password is not strong enough' });
+            }
+            
             const userExists = await userRepository.findOneBy({ email });
 
             if (userExists) {
