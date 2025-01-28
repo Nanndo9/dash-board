@@ -2,34 +2,53 @@ import { Request, Response } from 'express';
 import { userRepository } from '../repositories/userRepository';
 import { HttpStatus } from '../enums/htppStatus';
 import bcrypt from 'bcrypt';
-import { validateUserInput } from '../utils/validation';
 import validator from 'validator';
 import { UserBalanceRepository } from '../repositories/userBalanceRepository';
+import { z } from 'zod';
 
 export class UserController {
     static async createUser(req: Request, res: Response) {
         try {
+            const createUserSchema = z.object({
+                firstName: z.string({
+                    required_error: 'First name must be a string',
+                }).trim().min(1, {
+                    message: 'First name must be at least 1 characters long',
+                }),
+                lastName: z.string().trim().min(1, {
+                    message: 'Last name must be at least 1 characters long',
+                }),
+                email: z.string({
+                    required_error: 'Email must be a string',
+                }).email({
+                    message: 'Invalid email format',
+                }),
+                password: z.string({
+                    required_error: 'Password must be a string',
+
+                }).trim().min(6, {
+                    message: 'Password must be at least 6 characters long',
+                }),
+            });
+
             const { firstName, lastName, email, password, transactions } =
                 req.body;
-
-            const validation = validateUserInput(
+            await createUserSchema.parseAsync({
                 firstName,
                 lastName,
                 email,
-                password
-            );
-            if (!validation.valid) {
-                return res
-                    .status(HttpStatus.BAD_REQUEST)
-                    .json({ message: validation.message });
-            }
-            const userExists = await userRepository.findOneBy({ email });
+                password,
+            });
 
-            if (userExists) {
+            const emailExists = await userRepository.findOne({
+                where: { email },
+            });
+            if (emailExists) {
                 return res
                     .status(HttpStatus.BAD_REQUEST)
-                    .json({ message: 'User already exists' });
+                    .json({ message: 'Email is already in use' });
             }
+
             const passwordHash = await bcrypt.hash(password, 8);
             const userCreation = userRepository.create({
                 firstName,
@@ -42,10 +61,15 @@ export class UserController {
 
             const { password: _, ...user } = userCreation;
             return res.status(HttpStatus.OK).json(user);
-        } catch (error: any) {
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                return res
+                    .status(HttpStatus.BAD_REQUEST)
+                    .json({ message: error.errors[0].message });
+            }
             return res
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .json({ message: 'Error when creating user', error });
+                .json({ message: 'Error creating user', error });
         }
     }
     static async getAllUsers(_: Request, res: Response) {
@@ -188,7 +212,9 @@ export class UserController {
 
             return res.status(HttpStatus.OK).json(balance);
         } catch (error) {
-            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error fetching user balance', error });
+            return res
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({ message: 'Error fetching user balance', error });
         }
     }
 }
