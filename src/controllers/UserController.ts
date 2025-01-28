@@ -4,6 +4,8 @@ import { HttpStatus } from '../enums/htppStatus';
 import bcrypt from 'bcrypt';
 import { validateUserInput } from '../utils/validation';
 import validator from 'validator';
+import { UserBalanceRepository } from '../repositories/userBalanceRepository';
+
 export class UserController {
     static async createUser(req: Request, res: Response) {
         try {
@@ -144,5 +146,49 @@ export class UserController {
         return res
             .status(HttpStatus.OK)
             .json({ message: 'successful deleted user' });
+    }
+    static async login(req: Request, res: Response) {
+        try {
+            const { email, password } = req.body;
+            const user = await userRepository.findOne({ where: { email } });
+
+            if (!user) {
+                return res
+                    .status(HttpStatus.NOT_FOUND)
+                    .json({ message: 'User not found' });
+            }
+
+            const passwordMatch = await bcrypt.compare(password, user.password);
+
+            if (!passwordMatch) {
+                return res
+                    .status(HttpStatus.BAD_REQUEST)
+                    .json({ message: 'Invalid password' });
+            }
+
+            return res
+                .status(HttpStatus.OK)
+                .json({ message: 'Login successful' });
+        } catch {
+            return res
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({ message: 'Error when logging in' });
+        }
+    }
+
+    static async logout(req: Request, res: Response) {
+        return res.status(HttpStatus.OK).json({ message: 'Logout successful' });
+    }
+
+    static async postgresGetUserBalance(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const userBalanceRepository = new UserBalanceRepository();
+            const balance = await userBalanceRepository.getUserBalance(id);
+
+            return res.status(HttpStatus.OK).json(balance);
+        } catch (error) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error fetching user balance', error });
+        }
     }
 }

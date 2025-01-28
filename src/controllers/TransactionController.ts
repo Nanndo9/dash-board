@@ -56,4 +56,51 @@ export class TransactionController {
                 .json({ message: 'Error when seeking transactions' });
         }
     }
+
+    static async updateTransaction(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const { name, date, amount, type } = req.body;
+            const transaction = await transactionRepository.findOne({ where: { id } });
+
+            if (!transaction) {
+                return res
+                    .status(HttpStatus.NOT_FOUND)
+                    .json({ message: 'Transaction not found' });
+            }
+
+            transaction.name = name;
+            transaction.date = date;
+            transaction.amount = amount;
+            transaction.type = type;
+
+            await transactionRepository.save(transaction);
+
+            return res.status(HttpStatus.OK).json(transaction);
+        } catch (error: any) {
+            return res
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({ message: 'Error when updating transaction', error });
+        }
+    }
+    static async deleteTransaction(req: Request, res: Response) {
+        try{
+            const { id } = req.params;
+            const transaction = await transactionRepository.findOne({ where: { id } });
+
+            if (!transaction) {
+                return res
+                    .status(HttpStatus.NOT_FOUND)
+                    .json({ message: 'Transaction not found' });
+            }
+
+            await transactionRepository.delete(transaction);
+
+            return res.status(HttpStatus.OK).json({ message: 'Transaction deleted' });
+        }catch(error: any){
+            return res
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({ message: 'Error when deleting transaction', error });
+        }
+    }
 }
